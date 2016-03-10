@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>eReuss </title>
+    <link rel="stylesheet" type="text/css" href="style.css">    
+  </head>
+  <body>
+
+<div id="wrap">
+
+<div id="header">eReuss, image clipping</div>
+<table class="navigate"><tr><td><a href='/'>Upload image</a></td><td><a href='/loadpage'>Preprocessing</a></td></tr></table>
+
+<div class="rightdiv">
+<img src="image.png" style="display: none;" id="zoomimage" />  
+<h2>Image</h2>
+<canvas class="image" id="zoomcanvas" width="700" height="500" ></canvas>
+<script type="text/javascript" src="image.js"></script>  
+<table><tr><td>X=</td><td id='XCOORD'>0</td><td>Y=</td><td id='YCOORD'>0</td></tr></table>
+
+</div>
+<div class="leftdiv">
+<p>Use the left mouse button to drag the image and the mouse wheel to zoom.</p>
+<p>Press 1 for the top-left of the ROI.</p>
+<p>Press 2 for the top-right of the ROI.</p>
+<p>Press 3 to set the length of the ROI.</p>
+<p>Press 4 to set the well (starting) line.</p>
+
+[FORM]
+</div>
+<p id="debug"><p>
+</div>
+
+<!--<div id="footer">
+<p>eReusHooke on GitHub: <a href="https://github.com/lkrippahl/eHooke">github.com/lkrippahl/eHooke</a></p>
+</div>-->
+
+
+  </body>
+</html>
