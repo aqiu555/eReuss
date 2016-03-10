@@ -34,7 +34,7 @@ faulty, so use it at your own risk.
 
 This software is public domain. You have the right to copy, 
 distribute, reuse, modify, improve and debug it. Especially
-these lasts ones.
+these last ones.
 
 ***********************************************************
 ******              Instalation and use              ******
