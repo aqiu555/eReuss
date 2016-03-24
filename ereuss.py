@@ -44,7 +44,9 @@ class BandProfiler(object):
     peak_export = [('peak_smoothing','Smoothing (pixels)'),
                    ('num_gaussians','Number of Gaussians'),
                    ('min_peak_height','Minimum height (%)'),
-                   ('baseline_degree','Degree for baseline')]
+                   ('baseline_degree','Degree for baseline'),
+                   ('calc_langmuir','Plot Langmuir'),
+                   ('calc_hill','Plot Hill')]
     
     peak_template= """
     <table class="controls">
@@ -52,6 +54,8 @@ class BandProfiler(object):
     <tr><td>[baseline_degree]</td></tr>        
     <tr><td>[min_peak_height]</td></tr>
     <tr><td>[num_gaussians]</td></tr>
+    <tr><td>[calc_langmuir]</td></tr>
+    <tr><td>[calc_hill]</td></tr>
     </table>"""
     
             
@@ -74,6 +78,8 @@ class BandProfiler(object):
         self.scale = None
         self.units = 'pixels'
         self.lane_start = 0
+        self.calc_langmuir = False
+        self.calc_hill = False
         
     def build_band_text(self):
         self.band_text=''
@@ -132,7 +138,7 @@ class BandProfiler(object):
             b2 = self.bands[1]
             dist = b2[0]-b1[0]
             self.scale = float(band_sep)/dist
-            self.units = 'cm'        
+            self.units = 'cm'                  
         else:
             self.scale = 1.0
             self.units = 'pixels'        
@@ -157,9 +163,9 @@ class BandProfiler(object):
                 else:
                     mobs.append(b[0][0])
             mobs = np.array(mobs).astype(float)           
-            norm_mobs, keq, err= gel.langmuir(ratios,mobs)            
-            gel.plot_langmuir(file_name,norm_mobs,ratios,keq)
-            return keq,err
+            keq,min_mob, err= gel.langmuir(ratios,mobs)            
+            gel.plot_langmuir(file_name,mobs,ratios,keq,min_mob)
+            return keq,min_mob,err
         else:
             return None
             
@@ -219,14 +225,16 @@ class EReuss(object):
         
     export_report = [('base_file_name','Report name'),
                      ('voltage','Voltage'),
-                     ('time','Time')]
+                     ('time','Time'),
+                     ('gel_conc','Gel concentration')
+                     ]
     
     report_template= """
     <table class="controls">
     <tr><td>[base_file_name]</td><td></td></tr>
     <tr><td>[voltage]</td><td>[time]</td></tr>
-    
-    
+    <tr><td>[gel_conc]</td><td></td></tr>
+    <tr><td>[calc_langmuir]</td><td>[calc_hill]</td></tr>    
     </table>"""
     
     def __init__(self):
@@ -250,7 +258,8 @@ class EReuss(object):
         
         self.base_file_name = 'report'
         self.voltage = 0.0
-        self.time = 0.0
+        self.time = 0.0        
+        self.gel_conc = 0.0
         self.langmuir = None
         self.hill = None
 
@@ -314,18 +323,24 @@ class EReuss(object):
         self.band_profiler.lane_start = self.lane_start
         self.band_profiler.find_peaks(self.processed)
         self.band_profiler.report_peaks(image,csv)
-        self.langmuir = self.band_profiler.langmuir('html/langmuir.png')
-        if self.langmuir is not None:
+        if self.band_profiler.calc_langmuir:
+            self.langmuir = self.band_profiler.langmuir('html/langmuir.png')
             fil = open(csv,'a')
-            fil.write('\nLangmuir:\nKeq = {0}\nError =  {1}\n'.format(self.langmuir[0],self.langmuir[1]))
+            fil.write('\nLangmuir:\nKeq = {0}+-'.format(self.langmuir[0]))
+            fil.write('{0}\n'.format(self.langmuir[2]*1.96))
+            fil.write('min mobility = {0}\n'.format(self.langmuir[1]))            
             fil.close()
+        else:
+            self.langmuir=None
         
-        self.hill = self.band_profiler.hill('html/hill.png')                
-        if self.hill is not None:
+        if self.band_profiler.calc_hill:
+            self.hill = self.band_profiler.hill('html/hill.png')                
             fil = open(csv,'a')
             fil.write('\nHill:\nN = {0}\nKeq = {1}\nError =  {2}\n'.format(
                           self.hill[0],self.hill[1],self.hill[2]))
             fil.close()
+        else:
+            self.hill = None
         
         
     def save_profiles(self,file_name):    
@@ -336,7 +351,11 @@ class EReuss(object):
         ET.SubElement(doc,
                       "params",
                       scale=str(self.band_profiler.scale),
-                      units=self.band_profiler.units)
+                      units=self.band_profiler.units,
+                      voltage = str(self.voltage),
+                      time=str(self.time),
+                      gel_conc =str(self.gel_conc)
+                      )
 
         ET.SubElement(doc,
                       "clip",

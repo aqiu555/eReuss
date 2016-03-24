@@ -161,7 +161,6 @@ class Handler(BaseHTTPRequestHandler):
             Return post data as a dictionary 
         """        
         ctype,pdict = cgi.parse_header(self.headers.getheader('Content-type'))
-        print 'dict',pdict
         if ctype == 'multipart/form-data':
             postvars = cgi.parse_multipart(self.rfile, pdict)
         elif ctype == 'application/x-www-form-urlencoded':
@@ -171,12 +170,10 @@ class Handler(BaseHTTPRequestHandler):
                         keep_blank_values=1)
         else:
             postvars = {}
-        print 'prepost',postvars
         for key in postvars.keys():
             #this is important not only to get rid of lists but
             #because of the hidden input trick for checkboxes
             postvars[key]=postvars[key][0]
-        print postvars
         return postvars
         
             
@@ -195,7 +192,6 @@ class Handler(BaseHTTPRequestHandler):
                 return (res,msg)
         elif url == htc.URL_LOAD_IMAGE:
             query = self.post_data_as_dict()
-            print '*query', query
             htc.form_to_attributes(query,
                                EReuss.export_load,
                                ereuss)                                                   
@@ -231,7 +227,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         (res,msg)=self.handle_post_request()
-        print res, msg
         if not res:
             # upload failed
             self.send_response(200)       

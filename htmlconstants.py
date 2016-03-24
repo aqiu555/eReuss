@@ -166,9 +166,10 @@ def form_to_attributes(form_data,attributes,obj):
 
     for a in attributes:
         at_name = a[0]
-        print at_name
+        attr = getattr(obj,at_name)  
+        if type(attr) is bool:
+            setattr(obj, at_name, False)
         if at_name in form_data.keys():
-            attr = getattr(obj,at_name)  
             if type(attr) is bool:
                 setattr(obj, at_name, form_data[at_name].upper=='TRUE')
             elif type(attr) is int:
@@ -180,7 +181,6 @@ def form_to_attributes(form_data,attributes,obj):
             else:
                 setattr(obj, at_name, form_data[at_name])
                     
-      
             
 
 def process_html(html_source,replacements=None):

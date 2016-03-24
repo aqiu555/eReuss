@@ -202,7 +202,7 @@ def save_band_profile(aver,bands,save_image):
     plt.plot(np.arange(len(test)),test)
     plt.gca().axes.get_yaxis().set_visible(False)   
     plt.axis([0,len(aver),0,1])
-    plt.savefig(save_image,dpi=200,bbox_inches='tight')
+    plt.savefig(save_image,dpi=300,bbox_inches='tight')
     plt.close()       
 
 
@@ -221,7 +221,7 @@ def plot_band_peaks(band_profiles,out_file,start_line=-1,debug = True):
             bl = b/plot_scale+ix+1
             plt.plot(xs,bl,'-k',linewidth=3)
             plt.plot(xs,ys,'-r')            
-        plt.savefig(out_file+'_debug.png',dpi=200)
+        plt.savefig(out_file+'_debug.png',dpi=300,bbox_inches='tight')
         plt.close()
 
     # plot band profiles subtracting baseline
@@ -236,7 +236,7 @@ def plot_band_peaks(band_profiles,out_file,start_line=-1,debug = True):
                      '-r',linewidth=3)
     if start_line>=0:
         plt.plot([start_line,start_line],[0,len(band_profiles)+1],'-g',linewidth=3)
-    plt.savefig(out_file,dpi=200)
+    plt.savefig(out_file,dpi=300,bbox_inches='tight')
     plt.close()
 
 def load_image(input_image,channel='average',invert='auto'):
@@ -247,8 +247,7 @@ def load_image(input_image,channel='average',invert='auto'):
             if channel !=col:
                 tot = tot + orig[:,:,ix]
         orig = tot
-        
-    print channel, invert
+           
     orig = orig-np.min(orig)
     orig = orig/np.max(orig)
     if invert == 'yes' or (invert=='auto' and np.average(orig)>0.5):
@@ -257,35 +256,57 @@ def load_image(input_image,channel='average',invert='auto'):
 
 
 
-def langmuir_cost(k,ratios,mobilities):
-    kr = k*ratios
-    preds = kr/(1+kr)
+def langmuir_cost(x,ratios,mobilities):
+    kr = x[0]*ratios
+    preds = x[1]*kr/(1+kr)
     cost = np.sum((mobilities-preds)**2)
     return cost    
 
 def langmuir(ratios,mobility):
-    """return normalized mobility, Keq and max_mob"""
+    """return normalized mobility, Keq and max_mob
+       Fits the ka for the langmuir curve (x[0]) and the minimum mobility,
+       corresponding to the mobility at infinite ratio (x[1] is a scaling
+       factor on the predictions, which gives the minimum mobility as
+       max_mob*(1-res.x[0])
+    """    
     max_mob = np.max(mobility)
     mobs = (max_mob-mobility)/max_mob    
-    res = minimize_scalar(langmuir_cost,args=(ratios,mobs))
-    print res.fun
-    return mobs,res.x,res.fun
+    scale = 1-np.min(mobility)/max_mob
+    res = minimize(langmuir_cost,[1,scale],args=(ratios,mobs))
+    keq = res.x[0]
+    scale = res.x[1]
+    min_mob = max_mob*(1-scale)    
+    kr = keq*ratios    
+    preds = scale*kr/(1+kr)
+    residuals = mobs-preds
+    replicas = 500
+    ks = np.zeros(replicas)
+    for ix in range(replicas):
+        sample = mobs+residuals[np.random.randint(0,len(mobs),len(mobs))]
+        res = minimize(langmuir_cost,[keq,scale],args=(ratios,sample))
+        ks[ix]=res.x[0]
+    return keq,min_mob,np.std(ks)
     
-def plot_langmuir(file_name,mobs,ratios,keq):
+def plot_langmuir(file_name,mobilities,ratios,keq,min_mob):
+    axis_font = {'fontname':'Arial', 'size':'20'}
+    max_mob = np.max(mobilities)
+    mobs = (max_mob-mobilities)/(max_mob-min_mob)
     plt.figure(figsize=(10,8))                
     plt.plot(ratios,mobs,'xb')
     xs = np.linspace(0,np.max(ratios)*1.1,200)
     kr = keq*xs
     ys = kr/(1+kr)
     plt.plot(xs,ys,'-k')
-    plt.savefig(file_name,dpi=200)
+    #plt.title('Langmuir plot')
+    plt.ylabel('$ \Theta = (\mu_{free}-\mu)/(\mu_{free}-\mu_{min})$',**axis_font)
+    plt.xlabel('[LAC] (nM)',**axis_font)
+    plt.savefig(file_name,dpi=300,bbox_inches='tight')
     plt.close()
     
     
 def hill_cost(x,ratios,mobilities):
     ln = np.power(ratios[ratios>0],x[0])
     preds = ln/(x[1]+ln)
-    print preds
     cost = np.sum((mobilities[ratios>0]-preds)**2)
     return cost    
 
@@ -294,7 +315,6 @@ def hill(ratios,mobility):
     max_mob = np.max(mobility)
     mobs = (max_mob-mobility)/max_mob    
     res = minimize(hill_cost,[1,0.5],args=(ratios,mobs))
-    print res.fun
     return mobs,res.x,res.fun
     
 def plot_hill(file_name,mobs,ratios,n,k):
@@ -304,6 +324,6 @@ def plot_hill(file_name,mobs,ratios,n,k):
     ln = np.power(xs,n)
     ys = ln/(k+ln)
     plt.plot(xs,ys,'-k')
-    plt.savefig(file_name,dpi=200)
+    plt.savefig(file_name,dpi=300,bbox_inches='tight')
     plt.close()
     
